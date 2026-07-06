@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de Commissionnement Récurrent (MRR) - 36 Mois</title>
+    <!-- Tailwind CSS pour un design moderne et responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js pour des visualisations dynamiques et interactives -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome pour des icônes élégantes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Configuration de la police Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        input[type="range"] {
+            accent-color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 animate-fadeIn">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- LOGO SECRET : Cliquer dessus active/désactive la visibilité de la marge entreprise -->
+                <div onclick="togglePresentationMode()" title="Simulateur" class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-100 cursor-pointer select-none hover:bg-indigo-700 active:scale-95 transition-all">
+                    <i id="logoIcon" class="fa-solid fa-arrows-spin text-lg transition-transform duration-500"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Simulateur de Gains Récurrents</h1>
+                    <p class="text-[10px] sm:text-xs text-slate-500 font-medium">Modélisation de commissions récurrentes cumulatives sur 36 mois</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="resetToDefaults()" class="text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 transition-all">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> <span class="hidden sm:inline">Réinitialiser</span>
+                </button>
+                <button onclick="exportToCSV()" class="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm transition-all flex items-center">
+                    <i class="fa-solid fa-file-excel mr-1.5"></i> Exporter .CSV
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Panneau de configuration (Sidebar à gauche) -->
+        <section class="lg:col-span-4 space-y-6">
+            
+            <!-- Bloc 1 : Hypothèses financières de base -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <h2 class="text-sm font-bold text-slate-900 flex items-center uppercase tracking-wider">
+                    <i class="fa-solid fa-coins text-indigo-500 mr-2"></i> Hypothèses Financières
+                </h2>
+                <hr class="border-slate-100">
+                
+                <!-- Prix de vente récurrent -->
+                <div>
+                    <label for="inputUnitPrice" class="block text-xs font-semibold text-slate-600 mb-1.5">Abonnement Mensuel unitaire (remise déduite)</label>
+                    <div class="relative rounded-lg shadow-sm">
+                        <input type="number" id="inputUnitPrice" value="89" min="1" step="0.5" oninput="handleParamChange()" class="w-full pl-3 pr-16 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="text-xs font-bold text-slate-400">€ HT / mois</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Taux de désabonnement (Churn) -->
+                <div class="bg-red-50/50 p-3 rounded-xl border border-red-100">
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-red-700 flex items-center"><i class="fa-solid fa-user-minus mr-1.5"></i> Taux d'Attrition (Churn mensuel)</span>
+                        <span id="labelChurn" class="font-bold text-red-800">5.0%</span>
+                    </div>
+                    <input type="range" id="rangeChurn" min="0" max="15" step="0.5" value="5" oninput="handleChurnChange()" class="w-full h-1.5 bg-red-100 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Répartition des pourcentages -->
+                <div class="space-y-4 pt-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-700">Répartition du CA (%)</span>
+                        <span id="badgeTotalInvested" class="text-xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700">Commissions : 50%</span>
+                    </div>
+
+                    <!-- Part Agence -->
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>Part Agence (Récurrente)</span>
+                            <span id="labelAgency" class="font-bold text-slate-900">10%</span>
+                        </div>
+                        <input type="range" id="rangeAgency" min="0" max="100" value="10" oninput="handleRangeChange('Agency')" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Part Commercial -->
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>Part Commercial (Récurrente)</span>
+                            <span id="labelRep" class="font-bold text-slate-900">35%</span>
+                        </div>
+                        <input type="range" id="rangeRep" min="0" max="100" value="35" oninput="handleRangeChange('Rep')" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Budget Challenge / Cadeaux -->
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-500 mb-1">
+                            <span>Budget Challenge (Récurrent)</span>
+                            <span id="labelChallenge" class="font-bold text-slate-900">5%</span>
+                        </div>
+                        <input type="range" id="rangeChallenge" min="0" max="100" value="5" oninput="handleRangeChange('Challenge')" class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Structure de Valeur (Valorisation technique/support) -->
+                <div id="companyMarginBlock" class="bg-slate-50 rounded-xl p-3 border border-slate-100 mt-2 transition-all duration-300">
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <span class="font-semibold text-slate-600">Plateforme, R&D & Support</span>
+                        <span id="pctRemaining" class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">50%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
+                        <div id="barAgency" class="bg-red-500 h-full" style="width: 10%"></div>
+                        <div id="barRep" class="bg-violet-400 h-full" style="width: 35%"></div>
+                        <div id="barChallenge" class="bg-amber-400 h-full" style="width: 5%"></div>
+                        <div id="barRemaining" class="bg-emerald-500 h-full" style="width: 50%"></div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1 text-[9px] text-center mt-2 text-slate-500 font-medium">
+                        <div><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span>Agence</div>
+                        <div><span class="inline-block w-2 h-2 rounded-full bg-violet-400 mr-1"></span>Comm.</div>
+                        <div><span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>Chal.</div>
+                        <div><span class="inline-block w-2 h-2 rounded-full bg-emerald-50 mr-1"></span>Plateforme</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloc 2 : Paramétrage d'Acquisition Client -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <h2 class="text-sm font-bold text-slate-900 flex items-center uppercase tracking-wider">
+                    <i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i> Générateur d'Acquisition
+                </h2>
+                <hr class="border-slate-100">
+
+                <!-- Nombre de commerciaux -->
+                <div>
+                    <label for="inputRepsCount" class="block text-xs font-semibold text-slate-600 mb-1.5">Nombre de Commerciaux actifs</label>
+                    <div class="relative rounded-lg shadow-sm">
+                        <input type="number" id="inputRepsCount" value="1" min="1" step="1" oninput="handleParamChange()" class="w-full pl-3 pr-20 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="text-xs font-bold text-slate-400">commercial(es)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode de croissance -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Modèle d'évolution mensuel (par commercial)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setGrowthType('constant')" id="btnGrowthConstant" class="py-2 px-1 text-center rounded-lg border text-xs font-semibold transition-all">
+                            <i class="fa-solid fa-equals block mb-1 text-sm"></i> Constant
+                        </button>
+                        <button onclick="setGrowthType('linear')" id="btnGrowthLinear" class="py-2 px-1 text-center rounded-lg border text-xs font-semibold transition-all">
+                            <i class="fa-solid fa-arrow-trend-up block mb-1 text-sm"></i> Linéaire
+                        </button>
+                        <button onclick="setGrowthType('exponential')" id="btnGrowthExponential" class="py-2 px-1 text-center rounded-lg border text-xs font-semibold transition-all">
+                            <i class="fa-solid fa-angles-up block mb-1 text-sm"></i> Expo.
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ventes initiales -->
+                <div>
+                    <label for="inputStartSales" class="block text-xs font-semibold text-slate-600 mb-1.5">Nouveaux clients au Mois 1 (par commercial)</label>
+                    <input type="number" id="inputStartSales" value="16" min="0" oninput="generateSales()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                </div>
+
+                <!-- Facteur de croissance -->
+                <div id="containerGrowthFactor">
+                    <label id="labelGrowthFactor" for="inputGrowthFactor" class="block text-xs font-semibold text-slate-600 mb-1.5">Croissance mensuelle d'acquisition</label>
+                    <div class="relative rounded-lg shadow-sm">
+                        <input type="number" id="inputGrowthFactor" value="5" min="0" step="0.5" oninput="generateSales()" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span id="unitGrowthFactor" class="text-sm font-bold text-slate-500">ventes/m</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section de Droite : Bilan Annuel, Graphique et Tableau -->
+        <section class="lg:col-span-8 space-y-6">
+            
+            <!-- Bilan Annuel & Moyennes Mensuelles -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
+                        <i class="fa-solid fa-calendar-days text-indigo-500 mr-2"></i> Projections et Bilans Exercices Annuels
+                    </h2>
+                    <p class="text-[11px] text-slate-500">Suivi des performances récurrentes par année de collaboration.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Année 1 -->
+                    <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200/60 hover:border-indigo-100 hover:bg-slate-50 transition-all flex flex-col justify-between">
+                        <div class="border-b border-slate-200/80 pb-2 mb-3">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide block">Année 1 <span class="text-[10px] text-slate-400 font-normal">(Mois 1 à 12)</span></span>
+                            <span id="y1MRR" class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">Fin d'année : 0 € MRR</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-red-600 block">Part Agence (10%)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y1AgencyTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y1AgencyAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                            </div>
+                            <div class="border-t border-dashed border-slate-200 pt-2">
+                                <span class="text-[9px] uppercase font-bold text-violet-600 block">Part Commerciaux (35% Équipe)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y1RepTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y1RepAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                                <span id="y1RepAvgIndiv" class="text-[10px] text-violet-500 font-semibold block mt-1 bg-violet-50 px-1.5 py-0.5 rounded text-center">~0 € / m par comm.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Année 2 -->
+                    <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200/60 hover:border-indigo-100 hover:bg-slate-50 transition-all flex flex-col justify-between">
+                        <div class="border-b border-slate-200/80 pb-2 mb-3">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide block">Année 2 <span class="text-[10px] text-slate-400 font-normal">(Mois 13 à 24)</span></span>
+                            <span id="y2MRR" class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">Fin d'année : 0 € MRR</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-red-600 block">Part Agence (10%)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y2AgencyTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y2AgencyAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                            </div>
+                            <div class="border-t border-dashed border-slate-200 pt-2">
+                                <span class="text-[9px] uppercase font-bold text-violet-600 block">Part Commerciaux (35% Équipe)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y2RepTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y2RepAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                                <span id="y2RepAvgIndiv" class="text-[10px] text-violet-500 font-semibold block mt-1 bg-violet-50 px-1.5 py-0.5 rounded text-center">~0 € / m par comm.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Année 3 -->
+                    <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200/60 hover:border-indigo-100 hover:bg-slate-50 transition-all flex flex-col justify-between">
+                        <div class="border-b border-slate-200/80 pb-2 mb-3">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide block">Année 3 <span class="text-[10px] text-slate-400 font-normal">(Mois 25 à 36)</span></span>
+                            <span id="y3MRR" class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">Fin d'année : 0 € MRR</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <span class="text-[9px] uppercase font-bold text-red-600 block">Part Agence (10%)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y3AgencyTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y3AgencyAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                            </div>
+                            <div class="border-t border-dashed border-slate-200 pt-2">
+                                <span class="text-[9px] uppercase font-bold text-violet-600 block">Part Commerciaux (35% Équipe)</span>
+                                <div class="flex justify-between items-baseline mt-0.5">
+                                    <span id="y3RepTotal" class="text-sm font-bold text-slate-900">0 €</span>
+                                    <span id="y3RepAvg" class="text-[11px] text-slate-500 font-medium">Moy. 0 €/m</span>
+                                </div>
+                                <span id="y3RepAvgIndiv" class="text-[10px] text-violet-500 font-semibold block mt-1 bg-violet-50 px-1.5 py-0.5 rounded text-center">~0 € / m par comm.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphique d'évolution MRR vs Cumul -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Évolution Visuelle des Revenus</h2>
+                        <p class="text-xs text-slate-500">Suivi dynamique de la montée en puissance de l'activité</p>
+                    </div>
+                    <div class="flex items-center bg-slate-100 p-1 rounded-xl self-start">
+                        <button onclick="toggleChartType('cumulative')" id="btnChartCumulative" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm">
+                            Cumulé
+                        </button>
+                        <button onclick="toggleChartType('monthly')" id="btnChartMonthly" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600">
+                            Mensuel (MRR)
+                        </button>
+                    </div>
+                </div>
+                <div class="relative w-full h-80 sm:h-96">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Registre de ventes interactif -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Registre de Vente & Portefeuille Clients (36 Mois)</h2>
+                        <p class="text-xs text-slate-500">Ajustez directement les <strong>Nouveaux (par commercial)</strong> dans le tableau ci-dessous.</p>
+                    </div>
+                    <div class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center self-start sm:self-center">
+                        <i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> Modèle récurrent (Attrition 5% incluse)
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto max-h-[500px]">
+                    <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+                        <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500">
+                            <tr>
+                                <th scope="col" class="px-3 py-3 font-semibold text-center w-12">Mois</th>
+                                <th scope="col" class="px-3 py-3 font-semibold w-24 bg-slate-100/80">Nouveaux (par commercial)</th>
+                                <th scope="col" class="px-3 py-3 font-semibold w-24 text-center">Actifs (Équipe)</th>
+                                <th scope="col" class="px-3 py-3 font-semibold">CA Mensuel (MRR)</th>
+                                <th id="thAgency" scope="col" class="px-3 py-3 font-semibold text-red-700">Agence (10%)</th>
+                                <th id="thRep" scope="col" class="px-3 py-3 font-semibold text-violet-700">Comm. (35%)</th>
+                                <th id="thChallenge" scope="col" class="px-3 py-3 font-semibold text-amber-700">Chal. (5%)</th>
+                                <th id="thRemaining" scope="col" class="px-3 py-3 font-semibold text-emerald-700 bg-emerald-50/50">Plateforme, R&D & Support (50%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 bg-white">
+                            <!-- Rempli dynamiquement par JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400 font-medium">
+        <p>© 2026 - Simulateur Plan de Commissionnement Récurrent (SaaS & Retainer). Conçu avec précision.</p>
+    </footer>
+
+    <script>
+        const state = {
+            unitPrice: 89,
+            pctAgency: 10,       // Agence 10% par défaut
+            pctRep: 35,          // Commercial 35% par défaut
+            pctChallenge: 5,     // Challenge 5% par défaut
+            churnRate: 5.0,
+            repsCount: 1,
+            presentationMode: true, // ACTIVE PAR DÉFAUT : la marge est invisible à l'ouverture
+            rotationDegree: 0,
+            
+            growthType: 'constant',
+            startSales: 16,
+            growthFactor: 5,
+            
+            monthlyNewSales: Array(36).fill(0),
+            chartType: 'cumulative'
+        };
+
+        let chartInstance = null;
+
+        window.onload = function() {
+            setGrowthType('constant');
+            applyPresentationMode(); // Masque la part d'emblée à l'ouverture
+            updateSlidersUI();
+            calculateAndRender();
+        };
+
+        // Applique l'état du mode présentation (masquage/affichage de la part plateforme)
+        function applyPresentationMode() {
+            const companyMarginBlock = document.getElementById('companyMarginBlock');
+            const thRemaining = document.getElementById('thRemaining');
+
+            if (state.presentationMode) {
+                // Masquer les éléments de la marge plateforme
+                companyMarginBlock.classList.add('opacity-0', 'h-0', 'overflow-hidden', 'mt-0', 'p-0', 'border-0');
+                thRemaining.classList.add('hidden');
+            } else {
+                // Tout afficher
+                companyMarginBlock.classList.remove('opacity-0', 'h-0', 'overflow-hidden', 'mt-0', 'p-0', 'border-0');
+                thRemaining.classList.remove('hidden');
+            }
+        }
+
+        // Action magique discrète déclenchée en cliquant sur le logo
+        function togglePresentationMode() {
+            state.presentationMode = !state.presentationMode;
+            
+            // Animation de rotation esthétique sur l'icône du logo
+            state.rotationDegree += 180;
+            document.getElementById('logoIcon').style.transform = `rotate(${state.rotationDegree}deg)`;
+            
+            applyPresentationMode();
+            calculateAndRender();
+        }
+
+        function resetToDefaults() {
+            state.unitPrice = 89;
+            state.pctAgency = 10;
+            state.pctRep = 35;
+            state.pctChallenge = 5;
+            state.churnRate = 5.0;
+            state.repsCount = 1;
+            state.growthType = 'constant';
+            state.startSales = 16;
+            state.growthFactor = 5;
+            state.presentationMode = true; // Repasse en mode masqué par défaut à la réinitialisation
+            state.rotationDegree = 0;
+            
+            document.getElementById('logoIcon').style.transform = 'rotate(0deg)';
+            document.getElementById('inputUnitPrice').value = state.unitPrice;
+            document.getElementById('rangeChurn').value = state.churnRate;
+            document.getElementById('labelChurn').innerText = "5.0%";
+            document.getElementById('rangeAgency').value = state.pctAgency;
+            document.getElementById('rangeRep').value = state.pctRep;
+            document.getElementById('rangeChallenge').value = state.pctChallenge;
+            document.getElementById('inputStartSales').value = state.startSales;
+            document.getElementById('inputGrowthFactor').value = state.growthFactor;
+            document.getElementById('inputRepsCount').value = state.repsCount;
+            
+            applyPresentationMode();
+            updateSlidersUI();
+            setGrowthType('constant');
+        }
+
+        function handleChurnChange() {
+            state.churnRate = parseFloat(document.getElementById('rangeChurn').value);
+            document.getElementById('labelChurn').innerText = state.churnRate.toFixed(1) + "%";
+            calculateAndRender();
+        }
+
+        function handleRangeChange(source) {
+            const valAgency = parseFloat(document.getElementById('rangeAgency').value);
+            const valRep = parseFloat(document.getElementById('rangeRep').value);
+            const valChallenge = parseFloat(document.getElementById('rangeChallenge').value);
+            
+            const total = valAgency + valRep + valChallenge;
+            
+            if (total > 100) {
+                const overValue = total - 100;
+                if (source === 'Agency') document.getElementById('rangeAgency').value = valAgency - overValue;
+                else if (source === 'Rep') document.getElementById('rangeRep').value = valRep - overValue;
+                else if (source === 'Challenge') document.getElementById('rangeChallenge').value = valChallenge - overValue;
+            }
+
+            state.pctAgency = parseFloat(document.getElementById('rangeAgency').value);
+            state.pctRep = parseFloat(document.getElementById('rangeRep').value);
+            state.pctChallenge = parseFloat(document.getElementById('rangeChallenge').value);
+
+            updateSlidersUI();
+            calculateAndRender();
+        }
+
+        function updateSlidersUI() {
+            document.getElementById('labelAgency').innerText = state.pctAgency + '%';
+            document.getElementById('labelRep').innerText = state.pctRep + '%';
+            document.getElementById('labelChallenge').innerText = state.pctChallenge + '%';
+
+            const totalInvested = state.pctAgency + state.pctRep + state.pctChallenge;
+            const remaining = Math.max(0, 100 - totalInvested);
+
+            document.getElementById('badgeTotalInvested').innerText = 'Commissions : ' + totalInvested + '%';
+            document.getElementById('pctRemaining').innerText = remaining + '%';
+
+            document.getElementById('barAgency').style.width = state.pctAgency + '%';
+            document.getElementById('barRep').style.width = state.pctRep + '%';
+            document.getElementById('barChallenge').style.width = state.pctChallenge + '%';
+            document.getElementById('barRemaining').style.width = remaining + '%';
+
+            document.getElementById('thAgency').innerText = `Agence (${state.pctAgency}%)`;
+            document.getElementById('thRep').innerText = `Comm. (${state.pctRep}%)`;
+            document.getElementById('thChallenge').innerText = `Chal. (${state.pctChallenge}%)`;
+            document.getElementById('thRemaining').innerText = `Plateforme, R&D & Support (${remaining}%)`;
+        }
+
+        function setGrowthType(type) {
+            state.growthType = type;
+            
+            const btnConstant = document.getElementById('btnGrowthConstant');
+            const btnLinear = document.getElementById('btnGrowthLinear');
+            const btnExponential = document.getElementById('btnGrowthExponential');
+            const containerFactor = document.getElementById('containerGrowthFactor');
+            const labelGrowth = document.getElementById('labelGrowthFactor');
+            const unitGrowth = document.getElementById('unitGrowthFactor');
+
+            [btnConstant, btnLinear, btnExponential].forEach(btn => {
+                btn.className = "py-2 px-1 text-center rounded-lg border text-xs font-semibold transition-all border-slate-200 bg-white text-slate-700 hover:bg-slate-50";
+            });
+
+            if (type === 'constant') {
+                btnConstant.className = "py-2 px-1 text-center rounded-lg border text-xs font-bold transition-all border-indigo-200 bg-indigo-50 text-indigo-700";
+                containerFactor.classList.add('hidden');
+            } else if (type === 'linear') {
+                btnLinear.className = "py-2 px-1 text-center rounded-lg border text-xs font-bold transition-all border-indigo-200 bg-indigo-50 text-indigo-700";
+                containerFactor.classList.remove('hidden');
+                labelGrowth.innerText = "Ajout de clients/mois";
+                unitGrowth.innerText = "clients/m";
+            } else if (type === 'exponential') {
+                btnExponential.className = "py-2 px-1 text-center rounded-lg border text-xs font-bold transition-all border-indigo-200 bg-indigo-50 text-indigo-700";
+                containerFactor.classList.remove('hidden');
+                labelGrowth.innerText = "Taux de croissance (%)";
+                unitGrowth.innerText = "%/m";
+            }
+
+            generateSales();
+        }
+
+        function generateSales() {
+            state.startSales = Math.max(0, parseFloat(document.getElementById('inputStartSales').value) || 0);
+            state.growthFactor = Math.max(0, parseFloat(document.getElementById('inputGrowthFactor').value) || 0);
+
+            for (let m = 0; m < 36; m++) {
+                if (state.growthType === 'constant') {
+                    state.monthlyNewSales[m] = Math.round(state.startSales);
+                } else if (state.growthType === 'linear') {
+                    state.monthlyNewSales[m] = Math.round(state.startSales + (state.growthFactor * m));
+                } else if (state.growthType === 'exponential') {
+                    state.monthlyNewSales[m] = Math.round(state.startSales * Math.pow(1 + (state.growthFactor / 100), m));
+                }
+            }
+            calculateAndRender();
+        }
+
+        function handleParamChange() {
+            state.unitPrice = Math.max(0, parseFloat(document.getElementById('inputUnitPrice').value) || 0);
+            state.repsCount = Math.max(1, parseInt(document.getElementById('inputRepsCount').value, 10) || 1);
+            calculateAndRender();
+        }
+
+        function handleManualSalesChange(monthIndex, value) {
+            state.monthlyNewSales[monthIndex] = Math.max(0, parseInt(value, 10) || 0);
+            calculateAndRender();
+        }
+
+        function calculateAndRender() {
+            const data = [];
+            
+            let totalCumulativeAgency = 0;
+            let totalCumulativeRep = 0;
+            let totalCumulativeChallenge = 0;
+            let totalCumulativeRemaining = 0;
+            let totalCumulativeRevenue = 0;
+
+            let activeCustomers = 0;
+            const remainingPct = Math.max(0, 100 - (state.pctAgency + state.pctRep + state.pctChallenge));
+
+            for (let m = 0; m < 36; m++) {
+                const newAcquisitionsPerRep = state.monthlyNewSales[m];
+                const teamNewAcquisitions = newAcquisitionsPerRep * state.repsCount;
+                
+                if (m > 0) {
+                    activeCustomers = activeCustomers * (1 - state.churnRate / 100);
+                }
+                
+                activeCustomers += teamNewAcquisitions;
+                const monthlyRevenue = activeCustomers * state.unitPrice;
+
+                const agencyShare = (monthlyRevenue * state.pctAgency) / 100;
+                const repShare = (monthlyRevenue * state.pctRep) / 100;
+                const challengeShare = (monthlyRevenue * state.pctChallenge) / 100;
+                const remainingShare = (monthlyRevenue * remainingPct) / 100;
+
+                totalCumulativeRevenue += monthlyRevenue;
+                totalCumulativeAgency += agencyShare;
+                totalCumulativeRep += repShare;
+                totalCumulativeChallenge += challengeShare;
+                totalCumulativeRemaining += remainingShare;
+
+                data.push({
+                    month: m + 1,
+                    newAcquisitions: newAcquisitionsPerRep,
+                    activeCustomers: Math.round(activeCustomers * 10) / 10,
+                    monthlyRevenue,
+                    agencyShare,
+                    repShare,
+                    challengeShare,
+                    remainingShare,
+                    
+                    cumulativeRevenue: totalCumulativeRevenue,
+                    cumulativeAgency: totalCumulativeAgency,
+                    cumulativeRep: totalCumulativeRep,
+                    cumulativeChallenge: totalCumulativeChallenge,
+                    cumulativeRemaining: totalCumulativeRemaining
+                });
+            }
+
+            // Sommation par exercice annuel
+            let y1AgencyTotal = 0, y1RepTotal = 0, y1MRR = data[11].monthlyRevenue;
+            let y2AgencyTotal = 0, y2RepTotal = 0, y2MRR = data[23].monthlyRevenue;
+            let y3AgencyTotal = 0, y3RepTotal = 0, y3MRR = data[35].monthlyRevenue;
+
+            for (let i = 0; i < 12; i++) { y1AgencyTotal += data[i].agencyShare; y1RepTotal += data[i].repShare; }
+            for (let i = 12; i < 24; i++) { y2AgencyTotal += data[i].agencyShare; y2RepTotal += data[i].repShare; }
+            for (let i = 24; i < 36; i++) { y3AgencyTotal += data[i].agencyShare; y3RepTotal += data[i].repShare; }
+
+            const y1AgencyAvg = y1AgencyTotal / 12; const y1RepAvg = y1RepTotal / 12;
+            const y2AgencyAvg = y2AgencyTotal / 12; const y2RepAvg = y2RepTotal / 12;
+            const y3AgencyAvg = y3AgencyTotal / 12; const y3RepAvg = y3RepTotal / 12;
+
+            // Rendu DOM Année 1
+            document.getElementById('y1MRR').innerText = `Fin d'année : ${Math.round(y1MRR).toLocaleString('fr-FR')} € MRR`;
+            document.getElementById('y1AgencyTotal').innerText = y1AgencyTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y1AgencyAvg').innerText = `Moy. ${Math.round(y1AgencyAvg).toLocaleString('fr-FR')} €/m`;
+            document.getElementById('y1RepTotal').innerText = y1RepTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y1RepAvg').innerText = `Moy. ${Math.round(y1RepAvg).toLocaleString('fr-FR')} €/m`;
+            if (state.repsCount > 1) {
+                document.getElementById('y1RepAvgIndiv').innerText = `~${Math.round(y1RepAvg / state.repsCount).toLocaleString('fr-FR')} €/m par comm.`;
+                document.getElementById('y1RepAvgIndiv').classList.remove('hidden');
+            } else { document.getElementById('y1RepAvgIndiv').classList.add('hidden'); }
+
+            // Rendu DOM Année 2
+            document.getElementById('y2MRR').innerText = `Fin d'année : ${Math.round(y2MRR).toLocaleString('fr-FR')} € MRR`;
+            document.getElementById('y2AgencyTotal').innerText = y2AgencyTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y2AgencyAvg').innerText = `Moy. ${Math.round(y2AgencyAvg).toLocaleString('fr-FR')} €/m`;
+            document.getElementById('y2RepTotal').innerText = y2RepTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y2RepAvg').innerText = `Moy. ${Math.round(y2RepAvg).toLocaleString('fr-FR')} €/m`;
+            if (state.repsCount > 1) {
+                document.getElementById('y2RepAvgIndiv').innerText = `~${Math.round(y2RepAvg / state.repsCount).toLocaleString('fr-FR')} €/m par comm.`;
+                document.getElementById('y2RepAvgIndiv').classList.remove('hidden');
+            } else { document.getElementById('y2RepAvgIndiv').classList.add('hidden'); }
+
+            // Rendu DOM Année 3
+            document.getElementById('y3MRR').innerText = `Fin d'année : ${Math.round(y3MRR).toLocaleString('fr-FR')} € MRR`;
+            document.getElementById('y3AgencyTotal').innerText = y3AgencyTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y3AgencyAvg').innerText = `Moy. ${Math.round(y3AgencyAvg).toLocaleString('fr-FR')} €/m`;
+            document.getElementById('y3RepTotal').innerText = y3RepTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            document.getElementById('y3RepAvg').innerText = `Moy. ${Math.round(y3RepAvg).toLocaleString('fr-FR')} €/m`;
+            if (state.repsCount > 1) {
+                document.getElementById('y3RepAvgIndiv').innerText = `~${Math.round(y3RepAvg / state.repsCount).toLocaleString('fr-FR')} €/m par comm.`;
+                document.getElementById('y3RepAvgIndiv').classList.remove('hidden');
+            } else { document.getElementById('y3RepAvgIndiv').classList.add('hidden'); }
+
+            renderTable(data);
+            renderCharts(data);
+        }
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                
+                const remainingCell = state.presentationMode ? '' : `
+                    <td class="px-3 py-2 font-bold text-emerald-600 bg-emerald-50/20">${row.remainingShare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</td>
+                `;
+
+                tr.innerHTML = `
+                    <td class="px-3 py-2 text-center font-bold text-slate-500 border-r border-slate-100">${row.month}</td>
+                    <td class="px-2 py-1 bg-slate-100/50">
+                        <input type="number" value="${row.newAcquisitions}" min="0" 
+                            onchange="handleManualSalesChange(${index}, this.value)"
+                            class="w-full text-center bg-transparent focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded py-1 px-1 font-bold text-slate-900 transition-all">
+                    </td>
+                    <td class="px-3 py-2 font-semibold text-slate-800 text-center bg-slate-50/50">${Math.round(row.activeCustomers)}</td>
+                    <td class="px-3 py-2 font-bold text-slate-900">${row.monthlyRevenue.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</td>
+                    <td class="px-3 py-2 font-semibold text-red-600">${row.agencyShare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</td>
+                    <td class="px-3 py-2 font-semibold text-violet-600">${row.repShare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</td>
+                    <td class="px-3 py-2 font-semibold text-amber-600">${row.challengeShare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</td>
+                    ${remainingCell}
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function toggleChartType(type) {
+            state.chartType = type;
+            const btnCumul = document.getElementById('btnChartCumulative');
+            const btnMonth = document.getElementById('btnChartMonthly');
+
+            if (type === 'cumulative') {
+                btnCumul.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm";
+                btnMonth.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+            } else {
+                btnMonth.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm";
+                btnCumul.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+            }
+
+            calculateAndRender();
+        }
+
+        function renderCharts(data) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const labels = data.map(d => `Mois ${d.month}`);
+            const isCumulative = state.chartType === 'cumulative';
+
+            const datasets = [
+                {
+                    label: 'Part Agence',
+                    data: data.map(d => isCumulative ? d.cumulativeAgency : d.agencyShare),
+                    borderColor: '#ef4444',
+                    backgroundColor: isCumulative ? 'rgba(239, 68, 68, 0.04)' : '#ef4444',
+                    fill: isCumulative,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    type: isCumulative ? 'line' : 'bar'
+                },
+                {
+                    label: 'Part Commerciale (Équipe)',
+                    data: data.map(d => isCumulative ? d.cumulativeRep : d.repShare),
+                    borderColor: '#8b5cf6',
+                    backgroundColor: isCumulative ? 'rgba(139, 92, 246, 0.04)' : '#8b5cf6',
+                    fill: isCumulative,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    type: isCumulative ? 'line' : 'bar'
+                },
+                {
+                    label: 'Budget Challenge',
+                    data: data.map(d => isCumulative ? d.cumulativeChallenge : d.challengeShare),
+                    borderColor: '#f59e0b',
+                    backgroundColor: isCumulative ? 'rgba(245, 158, 11, 0.04)' : '#f59e0b',
+                    fill: isCumulative,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    type: isCumulative ? 'line' : 'bar'
+                }
+            ];
+
+            if (!state.presentationMode) {
+                datasets.push({
+                    label: 'Plateforme, R&D & Support',
+                    data: data.map(d => isCumulative ? d.cumulativeRemaining : d.remainingShare),
+                    borderColor: '#10b981',
+                    backgroundColor: isCumulative ? 'rgba(16, 185, 129, 0.04)' : '#10b981',
+                    fill: isCumulative,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    type: isCumulative ? 'line' : 'bar'
+                });
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: isCumulative ? 'line' : 'bar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 10, font: { family: 'Inter', size: 11, weight: 500 } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) label += new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: !isCumulative, grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 } } },
+                        y: { stacked: !isCumulative, grid: { color: 'rgba(241, 245, 249, 1)' }, ticks: { font: { family: 'Inter', size: 10 }, callback: function(value) { return value.toLocaleString('fr-FR') + ' €'; } } }
+                    }
+                }
+            });
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "Mois;Nouveaux Clients par Commercial;Nombre de Commerciaux;Clients Actifs Cumules Equipe;CA Recurrent Mensuel (MRR) Equipe (€);Part Agence (€);Part Commercial (€);Budget Challenge (€);Plateforme RND Support (€)\r\n";
+
+            const remainingPct = Math.max(0, 100 - (state.pctAgency + state.pctRep + state.pctChallenge));
+            let activeCustomers = 0;
+
+            for (let m = 0; m < 36; m++) {
+                const newAcquisitionsPerRep = state.monthlyNewSales[m];
+                const teamNewAcquisitions = newAcquisitionsPerRep * state.repsCount;
+                if (m > 0) activeCustomers = activeCustomers * (1 - state.churnRate / 100);
+                activeCustomers += teamNewAcquisitions;
+
+                const monthlyRevenue = activeCustomers * state.unitPrice;
+                const agency = (monthlyRevenue * state.pctAgency) / 100;
+                const rep = (monthlyRevenue * state.pctRep) / 100;
+                const challenge = (monthlyRevenue * state.pctChallenge) / 100;
+                const remaining = (monthlyRevenue * remainingPct) / 100;
+
+                csvContent += `${m + 1};${newAcquisitionsPerRep};${state.repsCount};${Math.round(activeCustomers)};${monthlyRevenue.toFixed(2)};${agency.toFixed(2)};${rep.toFixed(2)};${challenge.toFixed(2)};${remaining.toFixed(2)}\r\n`;
+            }
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Simulation_Gains_Recurrents.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
