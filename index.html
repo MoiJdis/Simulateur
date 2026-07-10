@@ -484,7 +484,7 @@
             document.getElementById('rangeChurnAnnuel').value = state.churnRateAnnuel;
             document.getElementById('labelChurnAnnuel').innerText = state.churnRateAnnuel.toFixed(1) + '%';
 
-            document.getElementById('badgeAttrition').innerHTML = `<i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> Modèle récurrent (Upfront Trésorerie) | Churn Mensuel : ${state.churnRateMensuel.toFixed(1)}% | Churn Annuel : ${state.churnRateAnnuel.toFixed(1)}%`;
+            document.getElementById('badgeAttrition').innerHTML = `<i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> Modèle récurrent | Churn Mensuel : ${state.churnRateMensuel.toFixed(1)}% | Churn Annuel : ${state.churnRateAnnuel.toFixed(1)}%`;
 
             document.getElementById('rangeAgency').value = state.pctAgency;
             document.getElementById('labelAgency').innerText = state.pctAgency + '%';
