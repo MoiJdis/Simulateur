@@ -93,7 +93,7 @@
                 <!-- Double Tarification (Mensuelle vs Annuelle) -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label for="inputMonthlyPrice" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Abo mensuel</label>
+                        <label for="inputMonthlyPrice" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Abo mensuel HT</label>
                         <div class="relative rounded-lg shadow-sm">
                             <input type="number" id="inputMonthlyPrice" value="99" min="1" step="0.5" oninput="handleParamChange()" class="w-full pl-3 pr-8 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
                             <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
@@ -102,7 +102,7 @@
                         </div>
                     </div>
                     <div>
-                        <label for="inputAnnualPrice" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Abo annuel</label>
+                        <label for="inputAnnualPrice" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Abo annuel HT</label>
                         <div class="relative rounded-lg shadow-sm">
                             <input type="number" id="inputAnnualPrice" value="990" min="1" step="0.5" oninput="handleParamChange()" class="w-full pl-3 pr-8 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
                             <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
@@ -250,9 +250,9 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div>
                     <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
-                        <i class="fa-solid fa-calendar-days text-indigo-500 mr-2"></i> <span id="titleBilanAnnuel">Projections et Bilans Annuels (Trésorerie / Cash-flow)</span>
+                        <i class="fa-solid fa-calendar-days text-indigo-500 mr-2"></i> <span id="titleBilanAnnuel">Projections et Bilans Annuels</span>
                     </h2>
-                    <p class="text-[11px] text-slate-500" id="bilanDesc">Suivi des flux financiers réels encaissés et distribués par année de collaboration.</p>
+                    <p class="text-[11px] text-slate-500" id="bilanDesc">Suivi des flux financiers par année de collaboration.</p>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -337,7 +337,7 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
-                        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider" id="chartMainTitle">Flux de Trésorerie Mensuels (Cash-flow)</h2>
+                        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider" id="chartMainTitle">Flux Mensuels</h2>
                         <p class="text-xs text-slate-500" id="chartSubTitle">Suivi dynamique de la montée en puissance de l'activité</p>
                     </div>
                     <div class="flex items-center bg-slate-100 p-1 rounded-xl self-start">
@@ -359,10 +359,10 @@
                 <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                         <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Registre de Vente & Portefeuille Clients (36 Mois)</h2>
-                        <p class="text-xs text-slate-500">Ajustez directement les nouvelles ventes dans le tableau ci-dessous pour voir le quota et la commission s'ajuster automatiquement.</p>
+                        <p class="text-xs text-slate-500">Ajustez directement les nouvelles ventes mensuelles dans le tableau ci-dessous pour voir le quota et la commission s'ajuster automatiquement.</p>
                     </div>
                     <div id="badgeAttrition" class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center self-start sm:self-center">
-                        <i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> Modèle récurrent (Upfront Trésorerie)
+                        <i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> Modèle récurrent 
                     </div>
                 </div>
 
